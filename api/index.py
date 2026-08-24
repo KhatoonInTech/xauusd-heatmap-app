@@ -1,14 +1,17 @@
 import os
-import json
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from upstash_redis import Redis
 
 app = FastAPI()
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+# Mount the static folder using a clean, deployment-agnostic path format
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Point templates directly to your root level templates folder
+templates = Jinja2Templates(directory="templates")
+
 
 # Initialize the industrial cloud database connection safely using environment variables
 redis_url = os.getenv("UPSTASH_REDIS_REST_URL")
