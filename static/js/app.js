@@ -11,17 +11,26 @@
             const response = await fetch('/api/market-data');
 const payload = await response.json();
 
+// Locate this section inside your app.js loop logic
 if (!payload || !payload.heatmap || payload.heatmap.length === 0) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#f97316";
-    ctx.font = "bold 16px monospace";
+    // 1. Wipe the black background canvas cleanly
+    ctx.fillStyle = "#020617"; // Slate 950 color match
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Force text settings with explicit contrasting colors
+    ctx.fillStyle = "#f97316"; // Bright Orange text
+    ctx.font = "bold 24px monospace";
     ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText("WAITING FOR DATA CONNECTION...", canvas.width / 2, canvas.height / 2);
-    ctx.font = "12px monospace";
-    ctx.fillStyle = "#64748b";
-    ctx.fillText("Database cache active. Turn on your home MT5 data bridge to stream layout lines.", canvas.width / 2, (canvas.height / 2) + 30);
+    
+    // 3. Subtext placement details
+    ctx.font = "14px monospace";
+    ctx.fillStyle = "#94a3b8"; // Light slate text
+    ctx.fillText("Database cache active. Turn on your home MT5 data bridge to stream metrics.", canvas.width / 2, (canvas.height / 2) + 40);
     return;
 }
+
             
             if (!payload || payload.status !== 'success') {
                 console.error("Data ingestion pipeline stalled.");
