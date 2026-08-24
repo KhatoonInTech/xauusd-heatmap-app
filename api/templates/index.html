@@ -11,16 +11,26 @@
     <header class="main-header">
         <h1>XAUUSD LIQUIDITY HEATMAP ENGINE</h1>
         <p class="subtitle">Vercel Serverless Architecture Deployment Frame</p>
+        <!-- MANUAL CONTROLS TO MANUALLY OVERRIDE SOURCE STATE -->
+        <div style="margin-top: 12px;">
+            <button id="sourceToggleBtn" style="background: #1e293b; border: 1px solid #334155; color: #fff; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; font-family: monospace;">
+                MODE: AUTO-SWITCHING
+            </button>
+        </div>
     </header>
 
     <main class="chart-wrapper">
-        <div class="canvas-scroll-container">
+        <div class="canvas-scroll-container" style="position: relative;">
+            <!-- HARDCODED BACKING WATERMARK TEXT IN CASE CANVAS FAILS -->
+            <div id="canvasLoaderFallback" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #475569; font-family: monospace; font-size: 14px; pointer-events: none; text-align: center; width: 100%;">
+                INITIALIZING PACKET CONNECTIONS...
+            </div>
             <canvas id="heatmapCanvas" width="960" height="540"></canvas>
         </div>
     </main>
 
     <footer class="main-footer">
-        <p>Status: Connected to Serverless Data Socket Pipeline</p>
+        <p>Status: Synchronizing network data pipelines...</p>
     </footer>
 
     <script src="/static/js/app.js"></script>
