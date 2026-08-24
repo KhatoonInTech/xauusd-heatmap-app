@@ -1,7 +1,79 @@
-/* Custom resets ensuring standard canvas performance acceleration layers */
-canvas {
+/* Core Structural Layout Configurations */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #020617; /* Deep Slate 950 */
+    color: #ffffff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.main-header {
+    text-align: center;
+    margin-bottom: 24px;
+    width: 100%;
+    max-w: 960px;
+}
+
+.main-header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #f97316; /* Thermal Orange */
+}
+
+.main-header .subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+}
+
+/* ANTI-SHRINK WRAPPER CORE */
+.chart-wrapper {
+    width: 100%;
+    max-width: 960px;
+    background-color: #0f172a; /* Slate 900 */
+    border: 1px solid #1e293b; /* Slate 800 */
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+
+.canvas-scroll-container {
+    width: 100%;
+    overflow-x: auto; /* Enable swift sideways panning on tiny phone layouts */
+    -webkit-overflow-scrolling: touch;
+}
+
+#heatmapCanvas {
+    min-w: 920px;
+    height: 480px;
+    background-color: #020617; /* Dark matrix canvas bed */
+    border-radius: 6px;
+    display: block;
+    
+    /* Dynamic GPU rendering optimization rules */
     image-rendering: -moz-crisp-edges;
     image-rendering: -webkit-crisp-edges;
     image-rendering: pixelated;
     image-rendering: crisp-edges;
+}
+
+.main-footer {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #475569;
 }
