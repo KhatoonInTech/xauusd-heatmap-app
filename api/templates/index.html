@@ -175,12 +175,19 @@
                     const data = await response.json();
 
                     if (data && data.heatmap && data.heatmap.length > 0) {
-                        if (footerText) {
-                            if (data.source === "MT5") {
-                                footerText.innerText = " 🚀 Status: Linked with Active Home MT5 Data Bridge";
-                            } else {
-                                footerText.innerHTML = " 🔥 Status: MT5 Standby • <span style='color:#eab308;'>Streaming Secure Cloud Binance Feed</span>";
-                            }
+                        // Locate this block inside the pullCloudMarketState function
+if (footerText) {
+    if (data.source === "MT5") {
+        footerText.innerText = "🟢 Status: Linked with Active Home MT5 Data Bridge";
+    } else if (data.source === "Cloud_Bybit") {
+        footerText.innerHTML = "🔵 Status: MT5 Standby • <span style='color:#38bdf8;'>Streaming Bybit Institutional Feed</span>";
+    } else if (data.source === "Cloud_Binance") {
+        footerText.innerHTML = "🟡 Status: MT5 Standby • <span style='color:#eab308;'>Streaming Binance Cloud Feed</span>";
+    } else {
+        footerText.innerHTML = "🔴 Status: <span style='color:#f87171;'>All feeds blocked. Retrying...</span>";
+    }
+}
+
                         }
                         renderMatrixFrame(data.heatmap, data.candles);
                     }
