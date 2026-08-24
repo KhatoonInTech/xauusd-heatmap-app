@@ -7,9 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from upstash_redis import Redis
 
+# INDUSTRIAL CORE FIX: Explicitly define the top-level app handler for Vercel
 app = FastAPI()
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Mount assets securely inside the serverless package wrapper
 app.mount("/static", StaticFiles(directory=os.path.join(CURRENT_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
 
@@ -29,7 +32,7 @@ def verify_bridge_token(request: Request):
     return True
 
 @app.post("/api/update-market-data")
-@app.post("/api/index.py/api/update-market-data")  # Path failover wrapper
+@app.post("/api/index.py/api/update-market-data")
 async def update_market_matrix(payload: dict, authenticated: bool = Depends(verify_bridge_token)):
     if not redis_client:
         raise HTTPException(status_code=503, detail="Database offline")
@@ -40,9 +43,8 @@ async def update_market_matrix(payload: dict, authenticated: bool = Depends(veri
     redis_client.set("XAUUSD_LIVE_STATE", json.dumps(compressed_state), ex=3600)
     return {"status": "success"}
 
-# --- RESOLVES THE SERVERLESS FASTAPI ROUTING PATHING BUG ---
 @app.get("/api/market-data")
-@app.get("/api/index.py/api/market-data")  # Path failover wrapper
+@app.get("/api/index.py/api/market-data")
 async def fetch_market_matrix():
     if redis_client:
         try:
@@ -69,14 +71,14 @@ async def fetch_market_matrix():
             
             heatmap_layers = []
             for b in book_data.get("bids", []):
-                heatmap_layers.append({"price": float(b[0]), "vol": float(b[1])})  // FIXED Array reference parsing bug
+                heatmap_layers.append({"price": float(b[0]), "vol": float(b[1])})
             for a in book_data.get("asks", []):
-                heatmap_layers.append({"price": float(a[0]), "vol": float(a[1])})  // FIXED Array reference parsing bug
+                heatmap_layers.append({"price": float(a[0]), "vol": float(a[1])})
                 
             candle_layers = []
             for k in klines_data:
                 candle_layers.append({
-                    "open": float(k[1]), "high": float(k[2]), "low": float(k[3]), "close": float(k[4])  // FIXED Array reference parsing bug
+                    "open": float(k[1]), "high": float(k[2]), "low": float(k[3]), "close": float(k[4])
                 })
                 
             return JSONResponse(content={"source": "Binance_Cloud", "heatmap": heatmap_layers, "candles": candle_layers})
@@ -89,9 +91,8 @@ async def fetch_market_matrix():
     fallback_candles = [{"open": base_p, "high": base_p+1, "low": base_p-1, "close": base_p+0.2} for _ in range(30)]
     return JSONResponse(content={"source": "Local_Fallback", "heatmap": fallback_heatmap, "candles": fallback_candles})
 
-# --- RESOLVES THE 404 HOME PAGE SERVERLESS REDIRECT BUG ---
 @app.get("/", response_class=HTMLResponse)
-@app.get("/api/index.py", response_class=HTMLResponse)  # Path failover wrapper
+@app.get("/api/index.py", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-                
+    
