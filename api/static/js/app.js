@@ -1,5 +1,5 @@
 /**
- * Industrial Dual-Source Canvas Rendering Engine - Defensively Guarded
+ * Clean UI Canvas Renderer - Pulls Verified Cloud-Side Data Streams
  */
 (function () {
     const canvas = document.getElementById('heatmapCanvas');
@@ -7,44 +7,11 @@
     const ctx = canvas.getContext('2d');
     const footerText = document.querySelector('.main-footer p');
     const fallbackLabel = document.getElementById('canvasLoaderFallback');
-    const toggleBtn = document.getElementById('sourceToggleBtn');
-
-    // Safe hardcoded structural fallback data to prevent an empty screen under any network condition
-    const backupPrice = 2515.00;
-    const mockHeatmap = Array.from({length: 30}, (_, i) => ({ price: backupPrice - 1.5 + (i * 0.1), vol: Math.random() * 50 }));
-    const mockCandles = Array.from({length: 40}, (_, i) => ({ open: backupPrice, high: backupPrice + 1, low: backupPrice - 1, close: backupPrice + 0.2 }));
-
-    let currentHeatmap = [];
-    let currentCandles = [];
-    let binanceSocket = null;
-    let fallbackActive = false;
-    let forceBinance = false;
-
-    if (toggleBtn) {
-        toggleBtn.onclick = function() {
-            forceBinance = !forceBinance;
-            if (forceBinance) {
-                toggleBtn.innerText = "MODE: FORCED BINANCE (CRYPTO)";
-                toggleBtn.style.borderColor = "#eab308";
-                activateBinanceFallback();
-            } else {
-                toggleBtn.innerText = "MODE: AUTO-SWITCHING";
-                toggleBtn.style.borderColor = "#334155";
-                if (binanceSocket) { binanceSocket.close(); binanceSocket = null; }
-                fallbackActive = false;
-                auditDataPipeline();
-            }
-        };
-    }
 
     function renderMatrixFrame(heatmap, candles) {
-        // Core Guard: If arrays are empty or corrupted, fall back to safe data structures to keep screen active
-        if (!heatmap || heatmap.length === 0 || !candles || candles.length === 0) {
-            heatmap = mockHeatmap;
-            candles = mockCandles;
-        }
+        if (!heatmap || heatmap.length === 0 || !candles || candles.length === 0) return;
 
-        // Hide the backing loader watermark text when rendering
+        // Instantly hide the initialization text overlay frame when genuine metrics load
         if (fallbackLabel) fallbackLabel.style.display = "none";
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -60,20 +27,20 @@
             return canvas.height - (((price - minPrice) / priceDelta) * canvas.height);
         }
 
-        // 1. BACKGROUND LIQUIDITY COATING
+        // 1. BACKGROUND METRIC MATRIX MAPPING
         const volumes = heatmap.map(item => item.vol);
         const maxVolume = Math.max(...volumes);
 
         for (let i = 0; i < heatmap.length; i++) {
             const layer = heatmap[i];
             const pixelY = projectPriceToY(layer.price);
-            const opacity = maxVolume > 0 ? Math.min(1, (layer.vol / maxVolume) * 1.5) : 0.2;
+            const opacity = maxVolume > 0 ? Math.min(1, (layer.vol / maxVolume) * 2.0) : 0.2;
             
             ctx.fillStyle = "rgba(249, 115, 22, " + opacity + ")";
             ctx.fillRect(0, Math.floor(pixelY), canvas.width, 4);
         }
 
-        // 2. FOREGROUND CANDLESTICK OVERLAY
+        // 2. FOREGROUND HIGH-DENSITY CANDLESTICK CHART OVERLAY
         const nodeWidth = 14;
         const nodeGap = 6;
         const horizontalPaddingLeft = 60;
@@ -88,10 +55,10 @@
             const yLow   = projectPriceToY(candle.low);
 
             const isBullish = candle.close >= candle.open;
-            const signatureColor = isBullish ? '#22c55e' : '#ef4444';
+            const themeColor = isBullish ? '#22c55e' : '#ef4444';
 
-            ctx.strokeStyle = signatureColor;
-            ctx.fillStyle = signatureColor;
+            ctx.strokeStyle = themeColor;
+            ctx.fillStyle = themeColor;
             ctx.lineWidth = 2;
 
             ctx.beginPath();
@@ -105,79 +72,28 @@
         }
     }
 
-    function activateBinanceFallback() {
-        if (fallbackActive) return;
-        fallbackActive = true;
-        
-        if (footerText) footerText.innerHTML = "🟡 MT5 Standby • <span style='color:#eab308;'>Streaming direct Binance public WebSockets (XAUUSDT)</span>";
+    async function pullCloudMarketState() {
+        try {
+            // Pull standard JSON outputs directly generated from un-blocked server nodes
+            const response = await fetch('/api/market-data');
+            const data = await response.json();
 
-        if (binanceSocket) { binanceSocket.close(); }
-        binanceSocket = new WebSocket(`wss://://binance.com`);
-
-        // Load baseline candles and render immediately using fallbacks if the network delays
-        fetch(`https://binance.com`)
-            .then(res => res.json())
-            .then(rawData => {
-                currentCandles = rawData.map(bar => ({
-                    open: parseFloat(bar[1]), high: parseFloat(bar[2]), low: parseFloat(bar[3]), close: parseFloat(bar[4])
-                }));
-                renderMatrixFrame(currentHeatmap, currentCandles);
-            })
-            .catch(() => {
-                currentCandles = mockCandles;
-                renderMatrixFrame(currentHeatmap, currentCandles);
-            });
-
-        binanceSocket.onmessage = function (event) {
-            const packet = JSON.parse(event.data);
-
-            if (packet.bids && packet.asks) {
-                currentHeatmap = [];
-                packet.bids.forEach(b => currentHeatmap.push({ price: parseFloat(b[0]), vol: parseFloat(b[1]) }));
-                packet.asks.forEach(a => currentHeatmap.push({ price: parseFloat(a[0]), vol: parseFloat(a[1]) }));
-                renderMatrixFrame(currentHeatmap, currentCandles);
-            }
-
-            if (packet.e === "kline") {
-                const k = packet.k;
-                const activeTickCandle = {
-                    open: parseFloat(k.o), high: parseFloat(k.h), low: parseFloat(k.l), close: parseFloat(k.c)
-                };
-                if (currentCandles.length > 0) {
-                    if (!k.x) {
-                        currentCandles[currentCandles.length - 1] = activeTickCandle;
+            if (data && data.heatmap && data.heatmap.length > 0) {
+                if (footerText) {
+                    if (data.source === "MT5") {
+                        footerText.innerText = "🟢 Status: Linked with Active Home MT5 Data Bridge";
                     } else {
-                        currentCandles.push(activeTickCandle);
-                        currentCandles.shift();
+                        footerText.innerHTML = "🟡 Status: MT5 Standby • <span style='color:#eab308;'>Streaming Secure Serverless Binance Feed</span>";
                     }
                 }
-            }
-        };
-    }
-
-    async function auditDataPipeline() {
-        if (forceBinance) return;
-
-        try {
-            const response = await fetch('/api/market-data');
-            const payload = await response.json();
-
-            if (payload && payload.status === 'success' && payload.heatmap && payload.heatmap.length > 0) {
-                if (fallbackActive) {
-                    if (binanceSocket) binanceSocket.close();
-                    fallbackActive = false;
-                }
-                if (footerText) footerText.innerText = "🟢 Status: Linked with Active Home MT5 Data Bridge";
-                renderMatrixFrame(payload.heatmap, payload.candles);
-            } else {
-                activateBinanceFallback();
+                renderMatrixFrame(data.heatmap, data.candles);
             }
         } catch (error) {
-            activateBinanceFallback();
+            console.error("Cloud synchronization polling loop delayed:", error);
         }
     }
 
-    setInterval(auditDataPipeline, 4000);
-    auditDataPipeline();
+    // Poll your Vercel endpoint every 3 seconds for continuous updates
+    setInterval(pullCloudMarketState, 3000);
+    pullCloudMarketState();
 })();
-            
