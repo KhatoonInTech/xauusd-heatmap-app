@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAUUSD Authentic Live Cloud Heatmap</title>
+    <script src="https://tailwindcss.com"></script>
+    <style>
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center font-sans antialiased p-4">
+    
+    <header class="mb-6 text-center">
+        <h1 class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-amber-300">
+            XAUUSDT LIVE LIQUIDITY ENGINE
+        </h1>
+        <p class="text-xs text-slate-400 mt-1 uppercase tracking-widest font-mono">
+            100% Authentic Binance Real-Time Data Pipeline • Cloud Autonomous
+        </p>
+    </header>
+
+    <main class="relative bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-2xl">
+        <canvas id="heatmapCanvas" width="960" height="540" class="rounded bg-slate-950 block"></canvas>
+        <div id="connectionStatus" class="absolute top-6 left-6 px-3 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-mono text-xs animate-pulse">
+            DISCONNECTED
+        </div>
+    </main>
+
+    <footer class="mt-4 text-center">
+        <p class="text-xs text-slate-500 font-mono">System running client-side over direct exchange WebSockets.</p>
+    </footer>
+
+    <script>
+        (function () {
+            const canvas = document.getElementById('heatmapCanvas');
+            const ctx = canvas.getContext('2d');
+            const statusLabel = document.getElementById('connectionStatus');
+
+            // Internal memory buffers to preserve live market states
+            let orderBookLayers = [];
+            let historicalCandles = [];
+
+            // Configuration scales to map price coordinates cleanly
+            const symbol = "xauusdt"; 
+            const maxCandleCount = 45;
+
+            // Update UI status banner properties
+            function setStatus(connected, message) {
+                statusLabel.innerText = message;
+                if (connected) {
+                    statusLabel.className = "absolute top-6 left-6 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono text-xs";
+                } else {
+                    statusLabel.className = "absolute top-6 left-6 px-3 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-mono text-xs animate-pulse";
+                }
+            }
+
+            // --- PHASE 1: HISTORICAL CANDLE REST DATA LOADING ---
+            async function seedHistoricalCandles() {
+                try {
+                    const response = await fetch(`https://binance.com{symbol.toUpperCase()}&interval=5m&limit=${maxCandleCount}`);
+                    const rawData = await response.json();
+                    
+                    historicalCandles = rawData.map(bar => ({
+                        open: parseFloat(bar[1]),
+                        high: parseFloat(bar[2]),
+                        low: parseFloat(bar[3]),
+                        close: parseFloat(bar[4])
+                    }));
+                    renderChartFrame();
+                } catch (e) {
+                    console.error("Rest data initialization failed:", e);
+                }
+            }
+
+            // --- PHASE 2: CONNECT DYNAMIC REAL-TIME LIVESTREAMS ---
+            // Open direct WebSocket socket lines to the Binance global matching machine
+            const wsUrl = `wss://://binance.com{symbol}@depth20@100ms/${symbol}@kline_5m`;
+            const marketSocket = new WebSocket(wsUrl);
+
+            marketSocket.onopen = () => setStatus(true, "LIVE EXCHANGE CONNECTED");
+            marketSocket.onerror = () => setStatus(false, "CONNECTION ERROR");
+            marketSocket.onclose = () => setStatus(false, "SOCKET STREAM CLOSED");
+
+            marketSocket.onmessage = (event) => {
+                const packet = JSON.parse(event.data);
+
+                // Handle incoming Order Book snapshot feeds
+                if (packet.bids && packet.asks) {
+                    orderBookLayers = [];
+                    // Process Bids (Buys)
+                    packet.bids.forEach(b => orderBookLayers.push({ price: parseFloat(b[0]), vol: parseFloat(b[1]), type: 'bid' }));
+                    // Process Asks (Sells)
+                    packet.asks.forEach(a => orderBookLayers.push({ price: parseFloat(a[0]), vol: parseFloat(a[1]), type: 'ask' }));
+                    renderChartFrame();
+                }
+
+                // Handle incoming live tick candlestick updates
+                if (packet.e === "kline") {
+                    const k = packet.k;
+                    const latestCandle = {
+                        open: parseFloat(k.o),
+                        high: parseFloat(k.h),
+                        low: parseFloat(k.l),
+                        close: parseFloat(k.c)
+                    };
+
+                    if (historicalCandles.length > 0) {
+                        // If it's the current candle closing frame update it, else append a new bar
+                        if (!k.x) {
+                            historicalCandles[historicalCandles.length - 1] = latestCandle;
+                        } else {
+                            historicalCandles.push(latestCandle);
+                            if (historicalCandles.length > maxCandleCount) historicalCandles.shift();
+                        }
+                    }
+                }
+            };
+
+            // --- PHASE 3: MASTER ENGINE GRAPHICAL RENDERING ---
+            function renderChartFrame() {
+                if (orderBookLayers.length === 0 || historicalCandles.length === 0) return;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Establish safe linear coordinate mapping values
+                const prices = orderBookLayers.map(l => l.price);
+                const maxPrice = Math.max(...prices);
+                const minPrice = Math.min(...prices);
+                const priceRange = maxPrice - minPrice;
+
+                if (priceRange === 0) return;
+
+                function projectPriceToY(price) {
+                    return canvas.height - (((price - minPrice) / priceRange) * canvas.height);
+                }
+
+                // A. Paint Background Liquidity Matrix Heatmap Lines
+                const volumes = orderBookLayers.map(l => l.vol);
+                const maxVolume = Math.max(...volumes);
+
+                for (let i = 0; i < orderBookLayers.length; i++) {
+                    const layer = orderBookLayers[i];
+                    const y = projectPriceToY(layer.price);
+                    
+                    // Normalize volume metrics to adjust color brightness ratios dynamically
+                    const opacity = maxVolume > 0 ? Math.min(1, (layer.vol / maxVolume) * 1.5) : 0.2;
+                    
+                    ctx.fillStyle = "rgba(249, 115, 22, " + opacity + ")";
+                    ctx.fillRect(0, Math.floor(y), canvas.width, 4);
+                }
+
+                // B. Paint Foreground Real-Time Candlestick Overlays
+                const candleWidth = 14;
+                const candleGap = 6;
+                const leftPadding = 50;
+
+                for (let j = 0; j < historicalCandles.length; j++) {
+                    const candle = historicalCandles[j];
+                    const x = leftPadding + j * (candleWidth + candleGap);
+
+                    const yOpen = projectPriceToY(candle.open);
+                    const yClose = projectPriceToY(candle.close);
+                    const yHigh = projectPriceToY(candle.high);
+                    const yLow = projectPriceToY(candle.low);
+
+                    const isBullish = candle.close >= candle.open;
+                    const themeColor = isBullish ? '#22c55e' : '#ef4444';
+
+                    ctx.strokeStyle = themeColor;
+                    ctx.fillStyle = themeColor;
+                    ctx.lineWidth = 2;
+
+                    // Draw Wick lines
+                    ctx.beginPath();
+                    ctx.moveTo(x + candleWidth / 2, yHigh);
+                    ctx.lineTo(x + candleWidth / 2, yLow);
+                    ctx.stroke();
+
+                    // Draw Body box blocks
+                    const topY = Math.min(yOpen, yClose);
+                    const heightY = Math.max(3, Math.abs(yOpen - yClose));
+                    ctx.fillRect(x, topY, candleWidth, heightY);
+                }
+            }
+
+            // Core Execution initialization
+            seedHistoricalCandles();
+        })();
+    </script>
+</body>
+</html>
+
