@@ -8,9 +8,15 @@ from upstash_redis import Redis
 
 app = FastAPI()
 
-# Mount static folder securely using relative path declarations
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# Calculate the path of the directory containing index.py (the api folder)
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Mount the static folder using the absolute local path inside api/
+app.mount("/static", StaticFiles(directory=os.path.join(CURRENT_DIR, "static")), name="static")
+
+# Point templates directly to the templates folder inside api/
+templates = Jinja2Templates(directory=os.path.join(CURRENT_DIR, "templates"))
+
 
 # Initialize the industrial cloud database client within a safe execution sandbox
 redis_client = None
