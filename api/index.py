@@ -7,7 +7,6 @@ from fastapi.templating import Jinja2Templates
 from upstash_redis import Redis
 
 app = FastAPI()
-
 # Calculate the path of the directory containing index.py (the api folder)
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
