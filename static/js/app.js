@@ -9,8 +9,20 @@
     async function processAndRenderFrame() {
         try {
             const response = await fetch('/api/market-data');
-            const payload = await response.json();
+const payload = await response.json();
 
+if (!payload || !payload.heatmap || payload.heatmap.length === 0) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#f97316";
+    ctx.font = "bold 16px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("WAITING FOR DATA CONNECTION...", canvas.width / 2, canvas.height / 2);
+    ctx.font = "12px monospace";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText("Database cache active. Turn on your home MT5 data bridge to stream layout lines.", canvas.width / 2, (canvas.height / 2) + 30);
+    return;
+}
+            
             if (!payload || payload.status !== 'success') {
                 console.error("Data ingestion pipeline stalled.");
                 return;
