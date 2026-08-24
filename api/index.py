@@ -55,7 +55,7 @@ async def fetch_market_matrix():
             pass
 
     # 2. CLOUD FAILOVER: BYBIT API (Primary Cloud Source - Cloud Friendly)
-    # Bybit V5 Public API for XAUUSDT
+    # Bybit V5 Public API for XAUUSDT (Linear Perpetual)
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
         # Fetch Order Book (Linear Category for USDT Perps)
@@ -79,9 +79,8 @@ async def fetch_market_matrix():
                     heatmap_layers.append({"price": float(a[0]), "vol": float(a[1])})
 
                 # Parse Bybit Candles
-                # Bybit format: list = [[timestamp, open, high, low, close, ...], ...]
-                candle_layers = []
                 # Bybit returns newest first, so we reverse it for the chart
+                candle_layers = []
                 raw_candles = k_data["result"]["list"]
                 for k in reversed(raw_candles):
                     candle_layers.append({
@@ -127,4 +126,4 @@ async def fetch_market_matrix():
 @app.get("/api/index.py", response_class=HTMLResponse)
 async def serve_dashboard(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-                                                 
+    
